@@ -1,0 +1,9 @@
+Simulating 10 objects
+Starting
+Read in 81499 galaxies from catalog
+Create Gaussian PSF
+Creating galaxies
+Galaxies created in t=4.464014 s
+Added noise to final large image
+Wrote image to '../output/test/test1.fits'
+Wrote truth catalog to '../output/test/test1_1_truth.csv'
