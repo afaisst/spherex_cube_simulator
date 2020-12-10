@@ -143,8 +143,8 @@ def main(spherex_filter_name, output_name, params):
     full_image.wcs = wcs
 
     # prepare truth catalog
-    truth_catalog = Table( names=["IDENT","ra","dec","fluxtot","magtot"] ,
-                            dtype=[np.int , np.float64 , np.float64, np.float64, np.float64])
+    truth_catalog = Table( names=["IDENT","NUMBER","ra","dec","fluxtot","magtot"] ,
+                            dtype=[np.int , np.int , np.float64 , np.float64, np.float64, np.float64])
 
     ## Now we need to loop over our GALAXIES:
     logger.info('Creating galaxies')
@@ -232,7 +232,7 @@ def main(spherex_filter_name, output_name, params):
         full_image[bounds] += stamp[bounds]
 
         # update truth catalog
-        truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]), ra.deg ,
+        truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(cosmos_cat.real_cat.number[gal_index]), ra.deg ,
                                 dec.deg ,
                                 gal.flux , 
                                 -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734] )
