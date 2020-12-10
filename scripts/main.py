@@ -186,7 +186,7 @@ def main(spherex_filter_name, output_name, params):
         if len(spherex_filter_id) == 0:
             logger.info("Filter %s was not found. Abort." % spherex_filter_name)
             quit()
-        idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0] # row number of galaxy in catalog
+        idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0] # row number of galaxy in SED catalog
         if len(idx) == 0: # if a galaxy does not have an SED, just skip it.
             continue
         gal_SPHEREX_fnu = float(sed_catalog["col%g" % (10 + int(spherex_filter_id)) ][idx]) # TODO: variable with filter
@@ -232,7 +232,7 @@ def main(spherex_filter_name, output_name, params):
         full_image[bounds] += stamp[bounds]
 
         # update truth catalog
-        truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(cosmos_cat.real_cat.number[gal_index]), ra.deg ,
+        truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(sed_catalog["NUMBER"][idx]), ra.deg ,
                                 dec.deg ,
                                 gal.flux , 
                                 -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734] )
