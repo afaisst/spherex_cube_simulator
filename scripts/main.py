@@ -28,48 +28,55 @@ import time
 import galsim
 
 from astropy.io import fits, ascii
-from astropy.table import Table, Column, MaskedColumn, hstack, vstack
+from astropy.table import Table
 
 
-def main(spherex_filter, image_output_filename):
-    logging.basicConfig(format="%(message)s", level=logging.INFO, stream=sys.stdout)
-    #logging.basicConfig(format="%(message)s", level=logging.INFO, filename="test.log")
-    logger = logging.getLogger("SPHEREx_sim for filter %g" % spherex_filter)
-    logger.info("SPHEREx_sim for filter %g" % spherex_filter )
+def main(spherex_filter_name, output_name, params):
+    '''
+    Main script to run the SPHEREx GalSim simulation.
+    USAGE: main(spherex_filter_name , image_output_filename , params)
+    where
+        - spherex_filter_name: SPHEREx filter name as in the SPHEREx filter file (e.g., spherex_lvf1_m1)
+        - image_output_filename: file name of FITS file (note that if the file name is the same, new images are added to the HDU list)
+        - params: a dictionary with parameters to set up the simulation (see below)
 
+    OUTPUT: Outputs a FITS file with the simulated image in the HDU list with the name of the SPHEREx filter. It also creates
+            "truth" catalogs in the flux units of the image and magnitude. They are saved as [NAME]_[SPHEREx-FILTER].csv
+    '''
+    
     ## DEFINITIONS ########
     # Define some parameters here
-    pixel_scale = 0.6                           # arcsec/pixel
-    image_size_arcsec = 1*60                    # image size in arcminutes
-    noise_sigma = 1e-4                          # ADU  (Just use simple Gaussian noise here. Variance would be the square)
-    obj_density_per_arcminsq = 10               # number density of galaxies per arcmin squared 
-    zeropoint = 27                              # zeropoint of image (WILL CHANGE TO MJy/sr)
-    center_ra = 10*galsim.hours                 # The RA of the center of the image on the sky
-    center_dec = 2*galsim.degrees               # The Dec of the center of the image on the sky
-    random_seed = 1                             # random seed
-    psf_fwhm = 0.8                              # PSF FWHM (gaussian) in arcseconds    
+    pixel_scale = params["pixel_scale"]                             # arcsec/pixel
+    image_size_arcsec = params["image_size_arcmin"]*60              # image size in arcseconds
+    noise_sigma = params["noise_sigma"]                             # ADU  (Just use simple Gaussian noise here. Variance would be the square)
+    obj_density_per_arcminsq = params["obj_density_per_arcminsq"]   # number density of galaxies per arcmin squared 
+    center_ra = params["center_ra"]*galsim.hours                    # The RA of the center of the image on the sky
+    center_dec = params["center_dec"]*galsim.degrees                # The Dec of the center of the image on the sky
+    random_seed = params["random_seed"]                             # random seed
+    psf_fwhm = params["psf_fwhm"]                                   # PSF FWHM (gaussian) in arcseconds
+    image_output_filename = os.path.join( params["output_path"] , output_name )
     #####################
 
+    ## Set up Logger
+    #logging.basicConfig(format="%(message)s", level=logging.INFO, stream=sys.stdout)
+    logging.basicConfig(format="%(message)s", level=logging.INFO, filename=image_output_filename.replace(".fits",".log"))
+    logger = logging.getLogger("SPHEREx_sim for filter %s" % spherex_filter_name)
+    logger.info("SPHEREx_sim for filter %s" % spherex_filter_name )
 
     ## LOAD EXTERNAL CATALOGS ###
 
     ## Load the central wavelength of the SPHEREx filters
     # name - name of the filter
     # lam - wavelength in Angstroms
-    central_lam = ascii.read("../../external_catalogs/spherex_lvf_filters_with_centwave_2020Dec3.txt" , names=["name","lam"])
-    print("%g filters found in the filter file" % len(central_lam))
+    spherex_filters = ascii.read(params["spherex_filter_file"] , names=["name","lam"])
+    print("%g filters found in the filter file" % len(spherex_filters))
 
     ## Load SPHEREx SED catalog matched to GalSim shape catalog
     # col10 - col109 are the 100 SPHEREx filters
-    sed_catalog = Table.read("../../external_catalogs/SPHEREx_fluxes_matched_galsim_2020Dec8.fits")
+    sed_catalog = Table.read(params["spherex_sed_file"])
     print("Number of galaxies in the SED catalog: %g" % len(sed_catalog))
 
-
     ###########################
-
-    # Flux scaling with respect to the HST image. The HST image has zeropoint of 
-    # 25.94, and we can change it here.
-    flux_scaling_zp = 10**(-0.4*(25.94734 - zeropoint)) # ACS_ZP - new ZP
 
     # size of image in pixels
     image_size = int(image_size_arcsec/pixel_scale)
@@ -87,7 +94,7 @@ def main(spherex_filter, image_output_filename):
     # The COSMOSCatalog contains stamps and parametric fits to the COSMOS galaxies. Here
     # down to a magnitude of 25.2AB. (Fill in rest with point sources for example)
     cosmos_cat_name = 'real_galaxy_catalog_25.2.fits'
-    cosmos_cat_path = '/Users/afaisst/Work/Tools/GalSim/cosmos_data/COSMOS_25.2_training_sample/'
+    cosmos_cat_path = params["galsim_shape_directory"]
     cosmos_cat = galsim.COSMOSCatalog(cosmos_cat_name, dir=cosmos_cat_path , exclusion_level="marginal")
     logger.info('Read in %d galaxies from catalog', cosmos_cat.nobjects)
 
@@ -95,7 +102,6 @@ def main(spherex_filter, image_output_filename):
     # Note that one can define the pixel scale of the PSF. Usually it's the same
     # as the image
     psf = galsim.Gaussian(fwhm=psf_fwhm,flux=1)
-    #psf = galsim.InterpolatedImage(psf_file, scale = pixel_scale, flux = 1.)
     logger.info('Create Gaussian PSF')
 
     ## Setup the image:
@@ -176,19 +182,22 @@ def main(spherex_filter, image_output_filename):
         # After that, we have to apply the zeropoint correction.
 
         # 0) get the flux of this galaxy in this SPHEREx filter
-        spherex_filter = 1 # from 1 to 100
-        idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0]
+        spherex_filter_id = np.where( spherex_filters["name"] == spherex_filter_name )[0] # from 0 to 99
+        if len(spherex_filter_id) == 0:
+            logger.info("Filter %s was not found. Abort." % spherex_filter_name)
+            quit()
+        idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0] # row number of galaxy in catalog
         if len(idx) == 0: # if a galaxy does not have an SED, just skip it.
-            #print("no galaxy SED found - skip")
             continue
-        gal_SPHEREX_fnu = float(sed_catalog["col%g" % (9 + int(spherex_filter)) ][idx]) # TODO: variable with filter
+        gal_SPHEREX_fnu = float(sed_catalog["col%g" % (10 + int(spherex_filter_id)) ][idx]) # TODO: variable with filter
         
 
         # 1) scale the flux according to current filter.
         gal_ACS_counts_new = gal_SPHEREX_fnu * 10**(-0.4*(-48.6-25.94734)) # converts the SPHEREx f_nu [erg/s/cm2/A] to the ACS counts.
         flux_scaling_sed = gal_ACS_counts_new / gal.flux # flux scaling for SED
 
-        # 2) flux scaling to change zero point has been computed above.
+        # 2) flux scaling to change zero point from counts to MJy/sr
+        flux_scaling_zp = 10**(-0.4*(25.94734 - 8.9) ) / (pixel_scale**2) / 2.350443e-5 # from HST counts to MJy/sr
 
         # 3) apply the flux scaling
         gal *= flux_scaling_sed # scale flux to reflect SED
@@ -226,7 +235,7 @@ def main(spherex_filter, image_output_filename):
         truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]), ra.deg ,
                                 dec.deg ,
                                 gal.flux , 
-                                -2.5 * np.log10(gal.flux) + zeropoint] )
+                                -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734] )
 
 
     time2 = time.time()
@@ -242,33 +251,32 @@ def main(spherex_filter, image_output_filename):
     # similar. For now, we skip correlated noise and just use plain gaussian noise.
     #cn = galsim.CorrelatedNoise(image, rng=rng)
     #full_image.addNoise(cn)
-
     noise = galsim.GaussianNoise(rng, sigma=noise_sigma)
     full_image.addNoise(noise)
     logger.info('Added noise to final large image')
 
     ## Write image to disk. If an image is already available, add this image to the HDU.
     # Else create a new image first.
-    if os.path.exists(image_output_filename):
-        with fits.open(image_output_filename) as hdul:
-            galsim.fits.write(full_image , hdu_list=hdul)
-            hdul.writeto(image_output_filename , overwrite=True)
+    if os.path.exists(image_output_filename): # load existing image if exists, else create a new image
+        with fits.open(image_output_filename) as hdul: 
+            galsim.fits.write(full_image , hdu_list=hdul) # add to existing HDUL
+            hdul[-1].header["EXTNAME"] = spherex_filter_name # add extension name
+            hdul[-1].header["LAMBDA"] = str(float(spherex_filters["lam"][spherex_filter_id])) # add filter lambda
+            hdul.writeto(image_output_filename , overwrite=True) # write
     else:
-        full_image.write(image_output_filename)
-    #full_image.write(image_output_filename)
-    #galsim.fits.writeMulti([full_image,full_image], file_name=image_output_filename)
+        full_image.write(image_output_filename) # create a new image
+        with fits.open(image_output_filename) as hdul:
+            hdul[0].header["EXTNAME"] = spherex_filter_name # add extension name
+            hdul[0].header["LAMBDA"] = str(float(spherex_filters["lam"][spherex_filter_id])) # add filter lambda
+            hdul.writeto(image_output_filename , overwrite=True) # write
+
     logger.info('Wrote image to %r',image_output_filename)
 
     ## write truth catalog
-    # TODO: make a truth catalog for each filter
-    truth_catalog_filename = image_output_filename.replace(".fits" , "_%g_truth.csv" % spherex_filter)
+    truth_catalog_filename = image_output_filename.replace(".fits" , "_%s.csv" % spherex_filter_name)
     truth_catalog.write(truth_catalog_filename , overwrite=True , format="csv" )
     logger.info('Wrote truth catalog to %r',truth_catalog_filename)
 
     print("--- ALL DONE! ----")
-    
-if __name__ == "__main__":
 
-    ## Here would loop over the filters (1 - 100)
-    main(spherex_filter=1 , image_output_filename = "../output/test/test.fits")
-
+#####
