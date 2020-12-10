@@ -59,7 +59,7 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
 }
 ```
 
-The script called run.py shows how the images for different filters can be created. If the "output_name" is the same, the script adds the new image to the existing images as subsequent HDUs. Each of the HDU is named after the filter (e.g., "spherex_lvf1_m1") and also has the central wavelength of the filter in the header keyword "LAMBDA".
+The script called run.py shows how the images for different filters can be created. If the "output_name" is the same, the script adds the new image to the existing images as subsequent HDUs. Each of the HDU is named after the filter (e.g., "spherex_lvf1_m1") and also has the central wavelength of the filter in the header keyword "LAMBDA". In addition, a truth catalog is saved with the namig convention "[output_name]_[SPHEREx filter].csv". The file contains the IDENT (ID used by the GalSim COSMOS shape catalog) as well as the input coordinates (RA/DEC) and fluxes (in units of the image as well as AB magnitude).
 
 Here is the run.py example script:
 
@@ -91,6 +91,9 @@ for filt in filters:
     main(spherex_filter_name=filt , output_name = "test.fits" , params=params)
 
 ```
+
+Running this script would create an image "test.fits" with 2 HDU extensions, each containing one filter. In addition, truth catalogs are saved with the naming convension "[output_name]_[SPHEREx filter].csv". The file contains the IDENT (ID used by the GalSim COSMOS shape catalog) as well as the input coordinates (RA/DEC) and fluxes (in units of the image as well as AB magnitude).
+
 
 
 
