@@ -6,7 +6,9 @@ This script simulates images in the SPHEREx filters using realistic SEDs and gal
 
 The fluxes for each of the GalSim COSMOS galaxies are computed based on the EL-COSMOS SEDs (Saito et al. 2020) by convolving them with 100 SPHEREx filters. 
 
-The script works as a wrapper for GalSim and is very simple: It creates a GalSim image for each of the SPHEREx filters by choosing random galaxies from the GalSim COSMOS shape catalog, matching them to the SPHEREx flux file (containing the same galaxies), adjusting the fluxes, and painting them on an image. All the simulated images for each of the input filters are collected in a FITS file (one HDU for each filter). The HDU names correspond to the name of the filter and also include the central wavelength ("LAMBDA" header keyword). 
+The script works as a wrapper for GalSim and is very simple: It creates a GalSim image for each of the SPHEREx filters by choosing random galaxies from the GalSim COSMOS shape catalog, matching them to the SPHEREx flux file (containing the same galaxies), adjusting the fluxes, and painting them on an image. All the simulated images for each of the input filters are collected in a FITS file (one HDU for each filter). The HDU names correspond to the name of the filter and also include the central wavelength ("LAMBDA" header keyword).
+
+__NOTE__: The output format of the images is MJy/sr.
 
 ## External Data and Requirements
 
