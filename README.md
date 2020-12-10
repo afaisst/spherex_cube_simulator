@@ -21,14 +21,26 @@ Furthermore, the GalSim COSMOS shape catalog (the "25.2AB" version) has to be do
 
 Two external catalogs are needed to run the wrapper, which define the SPHEREx filters and contain the photometry for the COSMOS galaxies in the GalSim COSMOS shape catalog:
 
-* A file containing the SPHEREx filters and central wavelengths, which were used to calculate the fluxes for each of the galaxies in the GalSim COSMOS shape catalog. This catalog can be downloaded here: [LINK]
+* __SPHEREx filter file__: A file containing the SPHEREx filters and central wavelengths, which were used to calculate the fluxes for each of the galaxies in the GalSim COSMOS shape catalog. This catalog can be downloaded here: [LINK]
 
-* A catalog containing the fluxes of the GalSim COSMOS shape catalog. This catalog can be downloaded here: [LINK]
+* __SPHEREX SED file__: A catalog containing the fluxes of the GalSim COSMOS shape catalog. This catalog can be downloaded here: [LINK]
 
 
 ## Usage
 
-The cubes can be 
+The cubes are created by calling the function main.py:
+
+```
+main(spherex_filter_name=filt , output_name = "test.fits" , params=params)
+```
+
+where
+
+* spherex_filter_name: the SPHEREx filter name as listed in the SPHEREx filter file (e.g., "spherex_lvf1_m1")
+* output_name: name of the output FITS image and truth catalogs
+* params: a dictionary containing the parameters to create the simulated image (see below)
+
+adfadf
 
 ## References
 
