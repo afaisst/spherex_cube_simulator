@@ -2,7 +2,7 @@
 
 ## Summary
 
-This script simulates images in the SPHEREx filters using realistic SEDs and galaxy shapes from COSMOS. These cubes can be interpolated at the SPHEREx filter wavelengths and used by the SPHEREx simulator to create realistic LVFs.
+This script simulates images in the SPHEREx filters using realistic SEDs and galaxy shapes from COSMOS. These cubes (actually they are MEFs) can be interpolated at the SPHEREx filter wavelengths and used by the SPHEREx simulator to create realistic LVFs.
 
 The fluxes for each of the GalSim COSMOS galaxies are computed based on the EL-COSMOS SEDs (Saito et al. 2020) by convolving them with 100 SPHEREx filters. 
 
