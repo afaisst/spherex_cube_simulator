@@ -11,14 +11,14 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "random_seed":1,                  # Random seed
           "psf_fwhm":0.8,                    # PSF FWHM [arcsec]
           "output_path":"../output/",        # Output path to save images and truth catalogs
-          "spherex_filter_file":"../../external_catalogs/spherex_lvf_filters_with_centwave_2020Dec3.txt", # Location of SPHEREx filter file
+          "spherex_filter_file":"../../external_catalogs/spherex_lvf_filters_2020Dec2.txt", # Location of SPHEREx filter file
           "spherex_sed_file":"../../external_catalogs/SPHEREx_fluxes_matched_galsim_2020Dec8.fits", # Location of SPHEREx flux file
           "galsim_shape_directory":'/Users/afaisst/Work/Tools/GalSim/cosmos_data/COSMOS_25.2_training_sample/' # Path to GalSim shape directory containing the shape catalog
 }
 
 
 ## Which filters to run it
-spherex_filters = ascii.read("../../external_catalogs/spherex_lvf_filters_with_centwave_2020Dec3.txt" , names=["name","lam"])
+spherex_filters = ascii.read("../../external_catalogs/spherex_lvf_filters_2020Dec2.txt" , names=["name","lam"])
 #filters = ["spherex_lvf1_m1" , "spherex_lvf1_m3"]
 filters = spherex_filters["name"][0:2]
 
