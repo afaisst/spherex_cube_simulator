@@ -5,7 +5,7 @@ from astropy.io import fits, ascii
 def makeCube(filename , save):
     '''
     This function converts a FITS MEF into a FITS cube.
-    USAGE: output = makeCube(filename)
+    USAGE: output = makeCube(filename , save)
     where
         - filename: file name of FITS MEF [string]
         - save: If set to "True", then the cube is saved to disk with filename_cube = filename.replace(".fits" , "_cube.fits"). If set to "False", then the cube is directly returned as a numpy 3D array.  [True/False]
