@@ -30,7 +30,7 @@ Two external catalogs are needed to run the wrapper, which define the SPHEREx fi
 
 ## Usage
 
-The cubes are created by calling the function __main.py__:
+The FITS MEF is created by calling the function __main.py__:
 
 ```
 main(spherex_filter_name, output_name , params)
@@ -63,6 +63,20 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "galsim_shape_directory":'/Users/afaisst/Work/Tools/GalSim/cosmos_data/COSMOS_25.2_training_sample/' # Path to GalSim shape directory containing the shape catalog
 }
 ```
+
+The FITS MEF can be converted into a FITS cube using the function makeCube() in __makeCube.py__. 
+```
+output = makeCube(filename, save)
+```
+
+where
+
+* filename: file name to the FITS MEF [string]
+* save: If set to "True", then the cube is saved to disk with filename_cube = filename.replace(".fits" , "_cube.fits"). If set to "False", then the cube is directly returned as a numpy 3D array.  [True/False]
+
+The output is either "True" if save=True or a numpy 3D array with shape (nbr extensions, x_dim , y_dim).
+Note that the FITS cube seems to be almost a factor of 2 heavier.
+
 
 The script called __run.py__ shows how the images for different filters can be created. __If the "output_name" is the same, the script adds the new image to the existing images as subsequent HDUs.__ Each of the HDU is named after the filter (e.g., "spherex_lvf1_m1") and also has the central wavelength of the filter in the header keyword "LAMBDA". In addition, a truth catalog is saved with the namig convention "[output_name]_[SPHEREx filter].csv".
 
