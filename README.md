@@ -62,7 +62,7 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "spherex_sed_file":"../external_catalogs/SPHEREx_fluxes_matched_galsim_2020Dec8.fits", # Location of SPHEREx flux file
           "galsim_shape_directory":"../COSMOS_25.2_training_sample/", # Path to GalSim shape directory containing the shape catalog
           "galsim_input_catalog_name":"real_galaxy_catalog_25.2.fits", # Catalog name in galsim_shape_directory from where the galaxies are drawn
-          "psf_file_name":"none" # file name for PSF. If that is set, then psf_fwhm is not used. Else, set to "none"
+          "psf_file_name":"none" # file name for PSF (FITS format, same pixel scale as image). If that is set, then psf_fwhm is not used. Else, set to "none"
 }
 ```
 
