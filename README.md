@@ -58,9 +58,9 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "random_seed":1,                  # Random seed
           "psf_fwhm":0.8,                    # PSF FWHM [arcsec]
           "output_path":"../output/",        # Output path to save images and truth catalogs
-          "spherex_filter_file":"../../external_catalogs/spherex_lvf_filters_with_centwave_2020Dec3.txt", # Location of SPHEREx filter file
-          "spherex_sed_file":"../../external_catalogs/SPHEREx_fluxes_matched_galsim_2020Dec8.fits", # Location of SPHEREx flux file
-          "galsim_shape_directory":"/Users/afaisst/Work/Tools/GalSim/cosmos_data/COSMOS_25.2_training_sample/", # Path to GalSim shape directory containing the shape catalog
+          "spherex_filter_file":"../external_catalogs/spherex_lvf_filters_with_centwave_2020Dec3.txt", # Location of SPHEREx filter file
+          "spherex_sed_file":"../external_catalogs/SPHEREx_fluxes_matched_galsim_2020Dec8.fits", # Location of SPHEREx flux file
+          "galsim_shape_directory":"../COSMOS_25.2_training_sample/", # Path to GalSim shape directory containing the shape catalog
           "galsim_input_catalog_name":"real_galaxy_catalog_25.2.fits", # Catalog name in galsim_shape_directory from where the galaxies are drawn
           "psf_file_name":"none" # file name for PSF. If that is set, then psf_fwhm is not used. Else, set to "none"
 }
