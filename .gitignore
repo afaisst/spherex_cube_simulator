@@ -1,3 +1,9 @@
-output
-scripts/__pycache__
-scripts/run_all.py
+# ignore all...
+*
+
+# ... except these files
+!README.md
+!.gitignore
+!scripts/main.py
+!scripts/run.py
+!scripts/makeCube.py

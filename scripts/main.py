@@ -54,6 +54,7 @@ def main(spherex_filter_name, output_name, params):
     center_dec = params["center_dec"]*galsim.degrees                # The Dec of the center of the image on the sky
     random_seed = params["random_seed"]                             # random seed
     psf_fwhm = params["psf_fwhm"]                                   # PSF FWHM (gaussian) in arcseconds
+    psf_file_name = params["psf_file_name"]                         # PSF file name. This is used if not "none"
     image_output_filename = os.path.join( params["output_path"] , output_name )
     #####################
 
@@ -93,16 +94,26 @@ def main(spherex_filter_name, output_name, params):
     ## Read in galaxy catalog
     # The COSMOSCatalog contains stamps and parametric fits to the COSMOS galaxies. Here
     # down to a magnitude of 25.2AB. (Fill in rest with point sources for example)
-    cosmos_cat_name = 'real_galaxy_catalog_25.2.fits'
+    # New: here user can also load a selection of the catalog, cosmos_cat_name is a parameter now.
+    cosmos_cat_name = params["galsim_input_catalog_name"] #'real_galaxy_catalog_25.2.fits'
     cosmos_cat_path = params["galsim_shape_directory"]
     cosmos_cat = galsim.COSMOSCatalog(cosmos_cat_name, dir=cosmos_cat_path , exclusion_level="marginal")
     logger.info('Read in %d galaxies from catalog', cosmos_cat.nobjects)
 
     ## Load PSF
     # Note that one can define the pixel scale of the PSF. Usually it's the same
-    # as the image
-    psf = galsim.Gaussian(fwhm=psf_fwhm,flux=1)
-    logger.info('Create Gaussian PSF')
+    # as the image. Also, check if user provided PSF
+    if psf_file_name == "none":
+        psf = galsim.Gaussian(fwhm=psf_fwhm,flux=1)
+        logger.info('Create Gaussian PSF')
+    else:
+        logger.info("Using user provided PSF in FITS form.")
+        if os.path.exists(psf_file_name):
+            psf = galsim.InterpolatedImage(psf_file_name, scale=pixel_scale, flux=1)
+        else:
+            logger.info("PSF file does not exist.")
+            print("ERROR: PSF file does not exist! - abort")
+            quit()
 
     ## Setup the image:
     full_image = galsim.ImageF(image_size, image_size)
@@ -150,6 +161,7 @@ def main(spherex_filter_name, output_name, params):
     logger.info('Creating galaxies')
     time1 = time.time()
     for k in range(nobj_tot):
+
 
         # The usual random number generator using a different seed for each galaxy.
         ud = galsim.UniformDeviate(random_seed+k+1)
@@ -230,7 +242,7 @@ def main(spherex_filter_name, output_name, params):
 
         # Finally, add the stamp to the full image.
         full_image[bounds] += stamp[bounds]
-
+        
         # update truth catalog
         truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(sed_catalog["NUMBER"][idx]), ra.deg ,
                                 dec.deg ,
