@@ -86,8 +86,8 @@ def main(spherex_filter_name, output_name, params):
 
     # Number of objects
     nobj_tot = int(obj_density_per_arcminsq * image_size_arcsec**2/3600)
-    logger.info("Simulating %g objects" % (nobj_tot) )
-    print("Simulating %g objects" % (nobj_tot) )
+    logger.info("Simulating %g galaxies" % (nobj_tot) )
+    print("Simulating %g galaxies" % (nobj_tot) )
     nstar_tot = int(star_density_per_arcminsq * image_size_arcsec**2/3600)
     logger.info("Simulating %g stars" % (nstar_tot) )
     print("Simulating %g stars" % (nstar_tot) )
