@@ -50,6 +50,8 @@ def main(spherex_filter_name, output_name, params):
     image_size_arcsec = params["image_size_arcmin"]*60              # image size in arcseconds
     noise_sigma = params["noise_sigma"]                             # ADU  (Just use simple Gaussian noise here. Variance would be the square)
     obj_density_per_arcminsq = params["obj_density_per_arcminsq"]   # number density of galaxies per arcmin squared 
+    star_density_per_arcminsq = params["star_density_per_arcminsq"] # number density of stars [stars/arcmins]
+    star_mags_range = params["star_mags_range"]                     # magnitude limits for stars [bright , faint] in AB mags
     center_ra = params["center_ra"]*galsim.hours                    # The RA of the center of the image on the sky
     center_dec = params["center_dec"]*galsim.degrees                # The Dec of the center of the image on the sky
     random_seed = params["random_seed"]                             # random seed
@@ -85,6 +87,10 @@ def main(spherex_filter_name, output_name, params):
     # Number of objects
     nobj_tot = int(obj_density_per_arcminsq * image_size_arcsec**2/3600)
     logger.info("Simulating %g objects" % (nobj_tot) )
+    print("Simulating %g objects" % (nobj_tot) )
+    nstar_tot = int(star_density_per_arcminsq * image_size_arcsec**2/3600)
+    logger.info("Simulating %g stars" % (nstar_tot) )
+    print("Simulating %g stars" % (nstar_tot) )
 
     # set numpy random seed
     np.random.seed = random_seed
@@ -114,6 +120,15 @@ def main(spherex_filter_name, output_name, params):
             logger.info("PSF file does not exist.")
             print("ERROR: PSF file does not exist! - abort")
             quit()
+
+    ## Get correct SPHEREx filter band ID
+    spherex_filter_id = np.where( spherex_filters["name"] == spherex_filter_name )[0] # from 0 to 99
+    if len(spherex_filter_id) == 0:
+        logger.info("Filter %s was not found. Abort." % spherex_filter_name)
+        quit()
+
+    ## Flux conversion from HST counts to MJy/sr
+    flux_scaling_zp = 10**(-0.4*(25.94734 - 8.9) ) / (pixel_scale**2) / 2.350443e-5 # from HST counts to MJy/sr
 
     ## Setup the image:
     full_image = galsim.ImageF(image_size, image_size)
@@ -154,17 +169,125 @@ def main(spherex_filter_name, output_name, params):
     full_image.wcs = wcs
 
     # prepare truth catalog
-    truth_catalog = Table( names=["IDENT","NUMBER","ra","dec","fluxtot","magtot","theta"] ,
-                            dtype=[np.int , np.int , np.float64 , np.float64, np.float64, np.float64 , np.float64])
+    truth_catalog = Table( names=["IDENT","NUMBER","ra","dec","fluxtot","magtot","theta","flag_star"] ,
+                            dtype=[np.int , np.int , np.float64 , np.float64, np.float64, np.float64 , np.float64 , np.int])
 
-    ## Now we need to loop over our GALAXIES:
+    ## Now we need to loop over our GALAXIES -----------
     logger.info('Creating galaxies')
     time1 = time.time()
-    for k in range(nobj_tot):
+    gal_counter = 0
+    if nobj_tot > 0:
+        for k in range(nobj_tot):
 
 
-        # The usual random number generator using a different seed for each galaxy.
-        ud = galsim.UniformDeviate(random_seed+k+1)
+            # The usual random number generator using a different seed for each galaxy.
+            ud = galsim.UniformDeviate(random_seed+k+1)
+
+            # Choose a random RA, Dec around the sky_center.
+            # Note that for this to come out close to a square shape, we need to account for the
+            # cos(dec) part of the metric: ds^2 = dr^2 + r^2 d(dec)^2 + r^2 cos^2(dec) d(ra)^2
+            # So need to calculate dec first.
+            dec = center_dec + (ud()-0.5) * image_size_arcsec * galsim.arcsec
+            ra = center_ra + (ud()-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+            world_pos = galsim.CelestialCoord(ra,dec)
+
+            # We will need the image position as well, so use the wcs to get that
+            image_pos = wcs.toImage(world_pos)
+            
+            # pick a galaxy from the COSMOS catalog
+            gal = cosmos_cat.makeGalaxy(gal_type='parametric', rng=ud)
+            gal_index = gal.index.copy() # this is the galaxy index linked to the cosmos_cat (created by GalSim)
+            
+            # NOTE: in the following, use gal.index and cosmos_cat.real_cat.KEY to access the parameters in the real catalog. 
+            #print( "Flux comparison (catalog / from mag / used): (%g , %g , %g)" % (cosmos_cat.real_cat.stamp_flux[gal_index] , 10**(-0.4*(cosmos_cat.real_cat.mag[gal_index]  - 25.94734)) , gal.flux) )
+            
+            # Apply a random rotation
+            gal_theta = ud()*2.0*np.pi*galsim.radians
+            gal = gal.rotate(gal_theta)
+
+            # Rescale the flux of the galaxy ----
+            # NOTE: we cannot assign a flux via gal.flux = A, but we can do gal *= B for a factor B.
+            # Therefore we have to compute the flux relative to the ACS flux to get it in ACS counts.
+            # After that, we have to apply the zeropoint correction.
+
+            # 0) get the flux of this galaxy in this SPHEREx filter
+            # SPHEREx filter ID was derived above outside of the FOR loop
+            idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0] # row number of galaxy in SED catalog
+            if len(idx) == 0: # if a galaxy does not have an SED, just skip it.
+                continue
+            gal_SPHEREX_fnu = float(sed_catalog["col%g" % (10 + int(spherex_filter_id)) ][idx])
+            
+
+            # 1) scale the flux according to current filter.
+            gal_ACS_counts_new = gal_SPHEREX_fnu * 10**(-0.4*(-48.6-25.94734)) # converts the SPHEREx f_nu [erg/s/cm2/A] to the ACS counts.
+            flux_scaling_sed = gal_ACS_counts_new / gal.flux # flux scaling for SED
+
+            # 2) flux scaling to change zero point from counts to MJy/sr
+            # did that above outside the for loop
+
+            # 3) apply the flux scaling
+            gal *= flux_scaling_sed # scale flux to reflect SED
+            gal *= flux_scaling_zp # scale flux to reflect SPHEREx zeropoint (flux is not in SPHEREx flux units)
+            
+            # -------
+
+            # Convolve with the PSF.
+            final = galsim.Convolve(psf, gal)
+
+            # Account for the fractional part of the position
+            # cf. demo9.py for an explanation of this nominal position stuff.
+            x_nominal = image_pos.x + 0.5
+            y_nominal = image_pos.y + 0.5
+            ix_nominal = int(math.floor(x_nominal+0.5))
+            iy_nominal = int(math.floor(y_nominal+0.5))
+            dx = x_nominal - ix_nominal
+            dy = y_nominal - iy_nominal
+            offset = galsim.PositionD(dx,dy)
+
+            # We use method='no_pixel' here because the PSF image that we are using includes the
+            # pixel response already.
+            stamp = final.drawImage(wcs=wcs.local(image_pos), offset=offset, method='no_pixel')
+
+            # Recenter the stamp at the desired position:
+            stamp.setCenter(ix_nominal,iy_nominal)
+
+            # Find the overlapping bounds:
+            bounds = stamp.bounds & full_image.bounds
+
+            # Finally, add the stamp to the full image.
+            full_image[bounds] += stamp[bounds]
+            
+            # update truth catalog
+            truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(sed_catalog["NUMBER"][idx]), ra.deg ,
+                                    dec.deg ,
+                                    gal.flux , 
+                                    -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734 , 
+                                    float(gal_theta.deg),
+                                    0] )
+
+            gal_counter += 1
+        ## ENDFOR for adding galaxies
+
+    time2 = time.time()
+    tot_time = time2-time1
+    logger.info('Galaxies created in t=%f s' % tot_time)
+    logger.info('%g Galaxies created in the end' % gal_counter)
+    print('%g Galaxies created in the end' % gal_counter)
+    ## END for GALAXIES --------------
+
+
+    ## Now we need to loop over our STARS/POINT SOURCES -----------
+    logger.info('Creating stars/point sources')
+
+    # get star magnitudes
+    star_mags = np.random.uniform(low=star_mags_range[0] , high=star_mags_range[1] , size=nstar_tot)
+    time1 = time.time()
+    for p in range(nstar_tot):
+
+
+        # The usual random number generator using a different seed for each star.
+        # note here that we want to add nobj_tot, else we end up with the same positions again!
+        ud = galsim.UniformDeviate(random_seed+p+1+nobj_tot)
 
         # Choose a random RA, Dec around the sky_center.
         # Note that for this to come out close to a square shape, we need to account for the
@@ -176,49 +299,17 @@ def main(spherex_filter_name, output_name, params):
 
         # We will need the image position as well, so use the wcs to get that
         image_pos = wcs.toImage(world_pos)
+
+        # Create star (which is a Delta Function with total flux of 1)
+        star = galsim.DeltaFunction(flux=1.)
+
+        # Get flux of point source
+        star_acs_counts = 10**(-0.4 * (star_mags[p] - 25.94734) )
+        star *= star_acs_counts
+        star *= flux_scaling_zp
         
-        # pick a galaxy from the COSMOS catalog
-        gal = cosmos_cat.makeGalaxy(gal_type='parametric', rng=ud)
-        gal_index = gal.index.copy() # this is the galaxy index linked to the cosmos_cat (created by GalSim)
-        
-        # NOTE: in the following, use gal.index and cosmos_cat.real_cat.KEY to access the parameters in the real catalog. 
-        #print( "Flux comparison (catalog / from mag / used): (%g , %g , %g)" % (cosmos_cat.real_cat.stamp_flux[gal_index] , 10**(-0.4*(cosmos_cat.real_cat.mag[gal_index]  - 25.94734)) , gal.flux) )
-        
-        # Apply a random rotation
-        gal_theta = ud()*2.0*np.pi*galsim.radians
-        gal = gal.rotate(gal_theta)
-
-        # Rescale the flux of the galaxy ----
-        # NOTE: we cannot assign a flux via gal.flux = A, but we can do gal *= B for a factor B.
-        # Therefore we have to compute the flux relative to the ACS flux to get it in ACS counts.
-        # After that, we have to apply the zeropoint correction.
-
-        # 0) get the flux of this galaxy in this SPHEREx filter
-        spherex_filter_id = np.where( spherex_filters["name"] == spherex_filter_name )[0] # from 0 to 99
-        if len(spherex_filter_id) == 0:
-            logger.info("Filter %s was not found. Abort." % spherex_filter_name)
-            quit()
-        idx = np.where( sed_catalog["IDENT"] == int(cosmos_cat.real_cat.ident[gal_index]) )[0] # row number of galaxy in SED catalog
-        if len(idx) == 0: # if a galaxy does not have an SED, just skip it.
-            continue
-        gal_SPHEREX_fnu = float(sed_catalog["col%g" % (10 + int(spherex_filter_id)) ][idx]) # TODO: variable with filter
-        
-
-        # 1) scale the flux according to current filter.
-        gal_ACS_counts_new = gal_SPHEREX_fnu * 10**(-0.4*(-48.6-25.94734)) # converts the SPHEREx f_nu [erg/s/cm2/A] to the ACS counts.
-        flux_scaling_sed = gal_ACS_counts_new / gal.flux # flux scaling for SED
-
-        # 2) flux scaling to change zero point from counts to MJy/sr
-        flux_scaling_zp = 10**(-0.4*(25.94734 - 8.9) ) / (pixel_scale**2) / 2.350443e-5 # from HST counts to MJy/sr
-
-        # 3) apply the flux scaling
-        gal *= flux_scaling_sed # scale flux to reflect SED
-        gal *= flux_scaling_zp # scale flux to reflect SPHEREx zeropoint (flux is not in SPHEREx flux units)
-        
-        # -------
-
         # Convolve with the PSF.
-        final = galsim.Convolve(psf, gal)
+        final = galsim.Convolve(psf, star)
 
         # Account for the fractional part of the position
         # cf. demo9.py for an explanation of this nominal position stuff.
@@ -244,16 +335,18 @@ def main(spherex_filter_name, output_name, params):
         full_image[bounds] += stamp[bounds]
         
         # update truth catalog
-        truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(sed_catalog["NUMBER"][idx]), ra.deg ,
+        truth_catalog.add_row( [int(p) , int(-99), ra.deg ,
                                 dec.deg ,
-                                gal.flux , 
-                                -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734 , 
-                                float(gal_theta.deg)] )
-
+                                star.flux , 
+                                -2.5 * np.log10(star.flux/flux_scaling_zp) + 25.94734 , 
+                                0.0,
+                                1] )
+    ## ENDFOR for adding stars
 
     time2 = time.time()
     tot_time = time2-time1
-    logger.info('Galaxies created in t=%f s', tot_time)
+    logger.info('Stars created in t=%f s' % tot_time)
+    ## END for STARS --------------
 
     ## Now add Gaussian noise with this variance to the final image.  We have to do this step
     # at the end, rather than adding to individual postage stamps, in order to get the noise

@@ -5,7 +5,9 @@ from main import *
 params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "image_size_arcmin":1,            # image size [arcminutes]
           "noise_sigma":1e-4,               # sigma, in the units of the image
-          "obj_density_per_arcminsq":10,    # number density of galaxies [gal/arcmin2] 
+          "obj_density_per_arcminsq":10,    # number density of galaxies [gal/arcmin2]
+          "star_density_per_arcminsq":0,    # number density of stars [stars/arcmins]
+          "star_mags_range":[15,19.5],      # magnitude limits for stars [bright , faint] in AB mags 
           "center_ra":10,                   # The RA of the center of the image on the sky [degrees]
           "center_dec":2,                   # The Dec of the center of the image on the sky [degrees]
           "random_seed":1,                  # Random seed
