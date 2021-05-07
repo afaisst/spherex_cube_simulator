@@ -166,8 +166,8 @@ def main(spherex_filter_name, output_name, params):
     full_image.wcs = wcs
 
     # prepare truth catalog
-    truth_catalog = Table( names=["IDENT","NUMBER","ra","dec","fluxtot","magtot","theta","flag_star"] ,
-                            dtype=[np.int , np.int , np.float64 , np.float64, np.float64, np.float64 , np.float64 , np.int])
+    truth_catalog = Table( names=["IDENT","NUMBER","ra","dec","fluxtot","fluxtot_real","magtot","magtot_real","theta","flag_star"] ,
+                            dtype=[np.int , np.int , np.float64 , np.float64 , np.float64 , np.float64, np.float64, np.float64 , np.float64 , np.int])
 
     ## Now we need to loop over our GALAXIES -----------
     logger.info('Creating galaxies')
@@ -244,7 +244,11 @@ def main(spherex_filter_name, output_name, params):
             # We use method='no_pixel' here because the PSF image that we are using includes the
             # pixel response already.
             stamp = final.drawImage(wcs=wcs.local(image_pos), offset=offset, method='no_pixel')
-
+            
+            # note that when PSF FWHM <~ pixsize then the input flux is not correct!
+            # Here we measure the total flux again on the PSF-convolved but noiseless stamp.
+            flux_real = np.nansum(stamp.array)
+            
             # Recenter the stamp at the desired position:
             stamp.setCenter(ix_nominal,iy_nominal)
 
@@ -253,12 +257,14 @@ def main(spherex_filter_name, output_name, params):
 
             # Finally, add the stamp to the full image.
             full_image[bounds] += stamp[bounds]
-            
+
             # update truth catalog
             truth_catalog.add_row( [int(cosmos_cat.real_cat.ident[gal_index]) , int(sed_catalog["NUMBER"][idx]), ra.deg ,
                                     dec.deg ,
                                     gal.flux , 
+                                    flux_real,
                                     -2.5 * np.log10(gal.flux/flux_scaling_zp) + 25.94734 , 
+                                    -2.5 * np.log10(flux_real/flux_scaling_zp) + 25.94734 , 
                                     float(gal_theta.deg),
                                     0] )
 
@@ -321,6 +327,10 @@ def main(spherex_filter_name, output_name, params):
         # We use method='no_pixel' here because the PSF image that we are using includes the
         # pixel response already.
         stamp = final.drawImage(wcs=wcs.local(image_pos), offset=offset, method='no_pixel')
+        
+        # note that when PSF FWHM <~ pixsize then the input flux is not correct!
+        # Here we measure the total flux again on the PSF-convolved but noiseless stamp.
+        flux_real = np.nansum(stamp.array)
 
         # Recenter the stamp at the desired position:
         stamp.setCenter(ix_nominal,iy_nominal)
@@ -335,7 +345,9 @@ def main(spherex_filter_name, output_name, params):
         truth_catalog.add_row( [int(p) , int(-99), ra.deg ,
                                 dec.deg ,
                                 star.flux , 
+                                flux_real,
                                 -2.5 * np.log10(star.flux/flux_scaling_zp) + 25.94734 , 
+                                -2.5 * np.log10(flux_real/flux_scaling_zp) + 25.94734 ,
                                 0.0,
                                 1] )
     ## ENDFOR for adding stars
