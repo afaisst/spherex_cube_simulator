@@ -8,3 +8,5 @@
 !scripts/run.py
 !scripts/makeCube.py
 !scripts/adjust_background.py
+!sextractor_input
+!scripts/mk_sextractor_catalog.py

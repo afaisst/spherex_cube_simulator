@@ -15,9 +15,6 @@
 #    this list of conditions, and the disclaimer given in the documentation
 #    and/or other materials provided with the distribution.
 #
-""""
-This YAML file creates an HSC image.
-"""
 
 import sys
 import os
