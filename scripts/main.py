@@ -52,6 +52,7 @@ def main(spherex_filter_name, output_name, params):
     center_ra = params["center_ra"]*galsim.hours                    # The RA of the center of the image on the sky
     center_dec = params["center_dec"]*galsim.degrees                # The Dec of the center of the image on the sky
     random_seed = params["random_seed"]                             # random seed
+    in_grid = params["in_grid"]                                     # If True, align galaxies/stars in grid. CURRENTLY ONLY WORKS FOR EITHER STARS OR GALAXIES!
     psf_fwhm = params["psf_fwhm"]                                   # PSF FWHM (gaussian) in arcseconds
     psf_file_name = params["psf_file_name"]                         # PSF file name. This is used if not "none"
     image_output_filename = os.path.join( params["output_path"] , output_name )
@@ -88,6 +89,30 @@ def main(spherex_filter_name, output_name, params):
     nstar_tot = int(star_density_per_arcminsq * image_size_arcsec**2/3600)
     logger.info("Simulating %g stars" % (nstar_tot) )
     print("Simulating %g stars" % (nstar_tot) )
+
+    # If stars/galaxies should be arranged in a grid, we need to create the 
+    # grid points. Note that if sqrt(number objects) is not an integer, we have
+    # to add some more grid points (which are then not used.) We assume a square here.
+    if in_grid:
+
+        # adjust numbers to make grid points (assume square)
+        nobj_tot_generate = np.ceil(np.sqrt(nobj_tot))**2 # round up to the next square. This number is used to generate points.
+        print("Number of grid points to generate for Galaxies: %g (nbr of Galaxies: %g)" % (nobj_tot_generate,nobj_tot))
+        logger.info("Number of grid points to generate for Galaxies: %g (nbr of Galaxies: %g)" % (nobj_tot_generate,nobj_tot))
+
+        nstar_tot_generate = np.ceil(np.sqrt(nstar_tot))**2 # round up to the next square. This number is used to generate points.
+        print("Number of grid points to generate for Stars: %g (nbr of Stars: %g)" % (nstar_tot_generate,nstar_tot))
+        logger.info("Number of grid points to generate for Stars: %g (nbr of Stars: %g)" % (nstar_tot_generate,nstar_tot))
+
+        # now generate grid (these are relative to center as a fraction of total image width)
+        if nobj_tot > 0:
+            obj_ra_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nobj_tot_generate)))
+            obj_dec_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nobj_tot_generate)))
+            obj_radec_ids = [(rr,dd) for rr in obj_ra_ids for dd in obj_dec_ids]
+        if nstar_tot > 0:
+            star_ra_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nstar_tot_generate)))
+            star_dec_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nstar_tot_generate)))
+            star_radec_ids = [(rr,dd) for rr in star_ra_ids for dd in star_dec_ids]
 
     # set numpy random seed
     np.random.seed = random_seed
@@ -184,8 +209,13 @@ def main(spherex_filter_name, output_name, params):
             # Note that for this to come out close to a square shape, we need to account for the
             # cos(dec) part of the metric: ds^2 = dr^2 + r^2 d(dec)^2 + r^2 cos^2(dec) d(ra)^2
             # So need to calculate dec first.
-            dec = center_dec + (ud()-0.5) * image_size_arcsec * galsim.arcsec
-            ra = center_ra + (ud()-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+            if not in_grid:
+                dec = center_dec + (ud()-0.5) * image_size_arcsec * galsim.arcsec
+                ra = center_ra + (ud()-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+            if in_grid:
+                dec = center_dec + (obj_radec_ids[k][1]-0.5) * image_size_arcsec * galsim.arcsec
+                ra = center_ra + (obj_radec_ids[k][0]-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+
             world_pos = galsim.CelestialCoord(ra,dec)
 
             # We will need the image position as well, so use the wcs to get that
@@ -296,8 +326,13 @@ def main(spherex_filter_name, output_name, params):
         # Note that for this to come out close to a square shape, we need to account for the
         # cos(dec) part of the metric: ds^2 = dr^2 + r^2 d(dec)^2 + r^2 cos^2(dec) d(ra)^2
         # So need to calculate dec first.
-        dec = center_dec + (ud()-0.5) * image_size_arcsec * galsim.arcsec
-        ra = center_ra + (ud()-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+        if not in_grid:
+                dec = center_dec + (ud()-0.5) * image_size_arcsec * galsim.arcsec
+                ra = center_ra + (ud()-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+        if in_grid:
+            dec = center_dec + (star_radec_ids[k][1]-0.5) * image_size_arcsec * galsim.arcsec
+            ra = center_ra + (star_radec_ids[k][0]-0.5) * image_size_arcsec / np.cos(dec) * galsim.arcsec
+        
         world_pos = galsim.CelestialCoord(ra,dec)
 
         # We will need the image position as well, so use the wcs to get that
