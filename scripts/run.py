@@ -10,6 +10,8 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "star_mags_range":[15,19.5],      # magnitude limits for stars [bright , faint] in AB mags 
           "center_ra":10,                   # The RA of the center of the image on the sky [degrees]
           "center_dec":2,                   # The Dec of the center of the image on the sky [degrees]
+          "in_grid":True,                   # Instead of random positions, align galaxies/stars in grid. CURRENTLY ONLY WORKS FOR EITHER STARS OR GALAXIES!
+          "grid_margin":5,                  # grid margin in %
           "random_seed":1,                  # Random seed
           "psf_fwhm":0.8,                    # PSF FWHM [arcsec]
           "output_path":"../output/",        # Output path to save images and truth catalogs
