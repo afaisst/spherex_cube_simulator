@@ -58,6 +58,7 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "center_ra":10,                   # The RA of the center of the image on the sky [degrees]
           "center_dec":2,                   # The Dec of the center of the image on the sky [degrees]
           "in_grid":False,                  # Instead of random positions, align galaxies/stars in grid. CURRENTLY ONLY WORKS FOR EITHER STARS OR GALAXIES!
+          "grid_margin":5,                   # grid margin in % (relative to image size)
           "random_seed":1,                  # Random seed
           "psf_fwhm":0.8,                   # PSF FWHM [arcsec]
           "output_path":"../output/",       # Output path to save images and truth catalogs
@@ -101,6 +102,7 @@ params = {"pixel_scale":0.62,               # pixel scale [arcsec/px]
           "center_ra":10,                   # The RA of the center of the image on the sky [degrees]
           "center_dec":2,                   # The Dec of the center of the image on the sky [degrees]
           "in_grid":False,                  # Instead of random positions, align galaxies/stars in grid. CURRENTLY ONLY WORKS FOR EITHER STARS OR GALAXIES!
+          "grid_margin":5,                   # grid margin in % (relative to image size)
           "random_seed":1,                  # Random seed
           "psf_fwhm":0.8,                   # PSF FWHM [arcsec]
           "output_path":"../output/",       # Output path to save images and truth catalogs
@@ -127,7 +129,8 @@ for filt in filters:
 Running this script will create an image "test.fits" with 2 HDU extensions, each containing one filter. In addition, truth catalogs are saved with the naming convension "[output_name]_[SPHEREx filter].csv". The file contains the IDENT (ID used by the GalSim COSMOS shape catalog) as well as the input coordinates (RA/DEC) and fluxes (in units of the image as well as AB magnitude).
 
 #### Notes on parameter `in_grid`:
-If the parameter `in_grid` is set to TRUE, the galaxies or stars are arranged in an square grid with equally spaced grid points. This feature is currently only working of either galaxies or stars are chosen. If both are simulated, the grid overlaps (because the same grid is used for stars and galaxies!). To create the grid, the input number of galaxies (or stars) is rounded up such that sqrt(number of stars/galaxies) is an integer (in detail, the number of grid points is calculated by `np.ceil(np.sqrt(num))**2`. For example, if 5 galaxies are simulated, 9 grid points are created to arrange the 5 galaxies in a 3x3 grid (4 grid points will have no galaxies!). You can tweak the number densities per arcminsq to fill up the whole grid.
+If the parameter `in_grid` is set to TRUE, the galaxies or stars are arranged in an square grid with equally spaced grid points. The parameter `grid_margin` defines the distance between the edge of the image to the outside of the grid (in percent, relative to image size). For example, if it is set to 0%, the outside grid points would fall on the image's edge.
+The `in_grid` feature is currently only working of either galaxies or stars are chosen. If both are simulated, the grid overlaps (because the same grid is used for stars and galaxies!). To create the grid, the input number of galaxies (or stars) is rounded up such that sqrt(number of stars/galaxies) is an integer (in detail, the number of grid points is calculated by `np.ceil(np.sqrt(num))**2`. For example, if 5 galaxies are simulated, 9 grid points are created to arrange the 5 galaxies in a 3x3 grid (4 grid points will have no galaxies!). You can tweak the number densities per arcminsq to fill up the whole grid.
 
 
 ## References
