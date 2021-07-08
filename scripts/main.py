@@ -53,6 +53,7 @@ def main(spherex_filter_name, output_name, params):
     center_dec = params["center_dec"]*galsim.degrees                # The Dec of the center of the image on the sky
     random_seed = params["random_seed"]                             # random seed
     in_grid = params["in_grid"]                                     # If True, align galaxies/stars in grid. CURRENTLY ONLY WORKS FOR EITHER STARS OR GALAXIES!
+    grid_margin = params["grid_margin"]                             # grid margin in %
     psf_fwhm = params["psf_fwhm"]                                   # PSF FWHM (gaussian) in arcseconds
     psf_file_name = params["psf_file_name"]                         # PSF file name. This is used if not "none"
     image_output_filename = os.path.join( params["output_path"] , output_name )
@@ -106,12 +107,12 @@ def main(spherex_filter_name, output_name, params):
 
         # now generate grid (these are relative to center as a fraction of total image width)
         if nobj_tot > 0:
-            obj_ra_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nobj_tot_generate)))
-            obj_dec_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nobj_tot_generate)))
+            obj_ra_ids = np.linspace(start=grid_margin/100,stop=(1-grid_margin/100),num=int(np.sqrt(nobj_tot_generate)))
+            obj_dec_ids = np.linspace(start=grid_margin/100,stop=(1-grid_margin/100),num=int(np.sqrt(nobj_tot_generate)))
             obj_radec_ids = [(rr,dd) for rr in obj_ra_ids for dd in obj_dec_ids]
         if nstar_tot > 0:
-            star_ra_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nstar_tot_generate)))
-            star_dec_ids = np.linspace(start=0.1,stop=0.9,num=int(np.sqrt(nstar_tot_generate)))
+            star_ra_ids = np.linspace(start=grid_margin/100,stop=(1-grid_margin/100),num=int(np.sqrt(nstar_tot_generate)))
+            star_dec_ids = np.linspace(start=grid_margin/100,stop=(1-grid_margin/100),num=int(np.sqrt(nstar_tot_generate)))
             star_radec_ids = [(rr,dd) for rr in star_ra_ids for dd in star_dec_ids]
 
     # set numpy random seed
